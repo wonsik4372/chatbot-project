@@ -5,9 +5,9 @@
 package com.cse.deu.campusbot.model;
 
 /**
- * 프론트엔드로 가는 데이터 매핑
+ * 백엔드에서 프론트엔드로 가는 데이터 매핑
  * @author wonsik
  */
-public class ChatResponse {
+public record ChatResponse (String answer){
     
 }

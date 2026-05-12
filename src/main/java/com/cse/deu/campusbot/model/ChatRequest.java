@@ -5,9 +5,13 @@
 package com.cse.deu.campusbot.model;
 
 /**
- * 프론트엔드에서 오는 데이터 매핑
+ * 프론트엔드에서 백엔드로 오는 데이터 매핑
  * @author wonsik
  */
-public class ChatRequest {
-    
+public record ChatRequest (String query){
+    public ChatRequest {
+        if (query == null || query.trim().isEmpty()) {
+            throw new IllegalArgumentException("ERROR: 질문(query)은 비어있을 수 없습니다.");
+        }
+    }
 }
