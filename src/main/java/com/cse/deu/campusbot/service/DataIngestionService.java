@@ -5,19 +5,17 @@
 package com.cse.deu.campusbot.service;
 
 import com.cse.deu.campusbot.util.ConfigReader;
+import com.cse.deu.campusbot.parser.MarkdownCsvParser;
 
 import dev.langchain4j.data.document.Document;
+import dev.langchain4j.data.document.loader.FileSystemDocumentLoader;
+import dev.langchain4j.data.document.parser.apache.pdfbox.ApachePdfBoxDocumentParser;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 
-import org.apache.pdfbox.pdmodel.PDDocument;
-import technology.tabula.ObjectExtractor;
-import technology.tabula.Page;
-import technology.tabula.RectangularTextContainer;
-import technology.tabula.Table;
-import technology.tabula.extractors.SpreadsheetExtractionAlgorithm;
+// import org.apache.pdfbox.pdmodel.PDDocument;
 
 import java.io.File;
 import java.io.InputStream;
@@ -47,7 +45,7 @@ public class DataIngestionService {
     // 글자 수 기반 청크 사이즈 설정
     private static final int CHUNK_SIZE = 500;
     // 5% 오버랩 설정
-    private static final int OVERLAP_SIZE = (int) (CHUNK_SIZE * 0.15);
+    private static final int OVERLAP_SIZE = 0;
 
     public DataIngestionService(EmbeddingModel embeddingModel, InMemoryEmbeddingStore<TextSegment> embeddingStore) {
         this.embeddingModel = embeddingModel;
@@ -67,7 +65,7 @@ public class DataIngestionService {
         try (Stream<Path> paths = Files.walk(Paths.get(directoryPath))) {
             List<File> filesToProcess = paths
                     .filter(Files::isRegularFile)
-                    .filter(path -> path.toString().toLowerCase().matches(".*\\.(txt|pdf)$"))
+                    .filter(path -> path.toString().toLowerCase().matches(".*\\.(txt|pdf|csv)$"))
                     .map(Path::toFile)
                     .collect(Collectors.toList());
 
@@ -167,47 +165,36 @@ public class DataIngestionService {
         return processed.trim();
     }
 
+
     // ========================================================================
-    // Tabula PDF 추출 및 HTML 정규식 변환
+    // Apache PDFBox를 이용한 PDF 텍스트 추출 및 TXT 처리
     // ========================================================================
     private String extractText(File file) throws Exception {
-        if (file.getName().toLowerCase().endsWith(".txt")) {
-            return Files.readString(file.toPath());
-        } else if (file.getName().toLowerCase().endsWith(".pdf")) {
-            StringBuilder csvBuilder = new StringBuilder();
-            try (PDDocument document = PDDocument.load(file)) {
-                ObjectExtractor extractor = new ObjectExtractor(document);
-                SpreadsheetExtractionAlgorithm algorithm = new SpreadsheetExtractionAlgorithm();
+        String rawFileName = file.getName();
+        String contextName = rawFileName.contains(".") 
+                             ? rawFileName.substring(0, rawFileName.lastIndexOf(".")) 
+                             : rawFileName;
 
-                for (int p = 1; p <= document.getNumberOfPages(); p++) {
-                    Page page = extractor.extract(p);
-                    List<Table> tables = algorithm.extract(page);
-                    
-                    for (Table table : tables) {
-                        List<List<RectangularTextContainer>> rows = table.getRows();
-                        if (rows.isEmpty()) continue;
-                        List<RectangularTextContainer> header = rows.get(0);
-
-                        for (int i = 1; i < rows.size(); i++) { 
-                            List<RectangularTextContainer> row = rows.get(i);
-                            if (row == null || row.isEmpty()) continue;
-                            String timeSlot = row.get(0) != null ? row.get(0).getText().replace("\n", " ") : "알수없음";
-
-                            for (int j = 1; j < row.size(); j++) { 
-                                if (row.get(j) == null) continue;
-                                String content = row.get(j).getText().replace("\n", " ").trim();
-                                if (content.isEmpty() || content.equals(",")) continue;
-
-                                String day = (j < header.size() && header.get(j) != null) ? header.get(j).getText().trim() : "해당요일";
-                                String sourceName = file.getName().substring(0, file.getName().lastIndexOf("."));
-                                String structuredText = String.format("[문서명:%s] 시간:%s, 요일:%s, 내용:%s", sourceName, timeSlot, day, content);
-                                csvBuilder.append(structuredText).append("\n");
-                            }
-                        }
-                    }
-                }
-            }
-            return csvBuilder.toString();
+        if (rawFileName.toLowerCase().endsWith(".txt")) {
+            return "[문서명:" + contextName + "]\n" + Files.readString(file.toPath());
+            
+        } else if (rawFileName.toLowerCase().endsWith(".csv")) {
+            // csv 처리 
+            Document document = FileSystemDocumentLoader.loadDocument(file.toPath(), new MarkdownCsvParser());
+    
+            // 문서명 꼬리표 붙여주기
+            return "[문서명:" + contextName + "]\n" + document.text();
+            
+        } else if (rawFileName.toLowerCase().endsWith(".pdf")) {
+            // pdf 처리
+            // LangChain4j 공식 PDFBox 파서 객체 생성
+            ApachePdfBoxDocumentParser pdfParser = new ApachePdfBoxDocumentParser();
+            
+            // FileSystemDocumentLoader가 파일 열기/닫기, 텍스트 추출을 모두 알아서 처리
+            Document document = FileSystemDocumentLoader.loadDocument(file.toPath(), pdfParser);
+            
+            // 추출된 텍스트 앞에 문서명을 붙여서 반환 (문맥 유지)
+            return "[문서명:" + contextName + "]\n" + document.text();
         }
         return "";
     }

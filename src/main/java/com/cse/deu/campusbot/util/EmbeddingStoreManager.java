@@ -39,6 +39,11 @@ public class EmbeddingStoreManager {
                     store = new InMemoryEmbeddingStore<>();
                 }
             }
+            
+            if (store == null) {
+                System.out.println("새로운 인메모리 store을 생성합니다. ");
+                store = new InMemoryEmbeddingStore<>();
+            }
         }
         // 이미 생성 된 경우, 기존 스토어 반환
         return store;

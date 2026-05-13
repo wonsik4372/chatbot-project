@@ -32,12 +32,14 @@
             <version>0.30.0</version>
         </dependency>
         
-        <!-- PDF 파싱 및 표 추출 라이브러리 -->
+        <!-- apache pdf box parser -->
         <dependency>
-            <groupId>org.apache.pdfbox</groupId>
-            <artifactId>pdfbox</artifactId>
-            <version>2.0.29</version>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-document-parser-apache-pdfbox</artifactId>
+            <version>0.30.0</version>
         </dependency>
+        
+        <!-- tabula -->
         <dependency>
             <groupId>technology.tabula</groupId>
             <artifactId>tabula</artifactId>
@@ -60,6 +62,13 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>2.0.12</version>
+        </dependency>
+        
+        <!-- gson -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
         </dependency>
     </dependencies>
 

@@ -24,11 +24,11 @@ public class RagChatService {
     private final EmbeddingStore<TextSegment> embeddingStore;
 
     // 정확도를 위해 추출할 최대 문맥 개수 (기존 TOP_K = 10 유지)
-    private static final int MAX_RESULTS = 10;
+    private static final int MAX_RESULTS = 5;
     
     // 최소 유사도 점수 (0.0 ~ 1.0)
     // 이 점수보다 낮은 관련도의 데이터 무시
-    private static final double MIN_SCORE = 0.6;
+    private static final double MIN_SCORE = 0.57;
 
     public RagChatService(ChatLanguageModel chatModel, 
                           EmbeddingModel embeddingModel, 
@@ -50,9 +50,32 @@ public class RagChatService {
                 .maxResults(MAX_RESULTS)                               // 상위 10개 추출
                 .minScore(MIN_SCORE)                                   // 최소 연관성 필터링
                 .build();
-
+        
+        // ##### 정보를 찾을 수 없다고 뜨는거면 여기가 문제 아님? #####
         List<EmbeddingMatch<TextSegment>> matches = embeddingStore.search(searchRequest).matches();
+        
+        System.out.println("\n📊 [검색된 청크 유사도 결과 Top " + matches.size() + "]");
+        for (int i = 0; i < matches.size(); i++) {
+            EmbeddingMatch<TextSegment> match = matches.get(i);
 
+            // 1. 유사도 점수 (0.0 ~ 1.0)
+            double score = match.score(); 
+
+            // 2. 메타데이터 (출처)
+            String source = match.embedded().metadata().getString("source");
+
+            // 3. 텍스트 내용 (너무 길면 잘라서 출력)
+            String textSnippet = match.embedded().text().replaceAll("\\n", " ");
+            if (textSnippet.length() > 50) {
+                textSnippet = textSnippet.substring(0, 50) + "...";
+            }
+
+            // 보기 좋게 포맷팅해서 출력
+            System.out.printf("   👉 [%d위] 점수: %.4f | 출처: %s | 내용: %s\n", 
+                              i + 1, score, source, textSnippet);
+        }
+        System.out.println("=======================================================\n");
+    
         // 검색된 문맥이 없을 경우의 방어 로직 (환각/지어내기 방지)
         if (matches.isEmpty()) {
             System.out.println("⚠️ 관련 문맥을 찾을 수 없습니다.");
@@ -65,21 +88,25 @@ public class RagChatService {
                     String source = match.embedded().metadata().getString("source");
                     return "[" + source + "]\n" + match.embedded().text();
                 })
-                .collect(Collectors.joining("\n\n---\n\n"));
+                .collect(Collectors.joining("\n\n"));
 
         System.out.println("🔍 [디버깅] AI에게 전달될 문맥 데이터 개수: " + matches.size() + "개");
 
         // 프롬프트(Prompt) 엔지니어링 
         String systemPrompt = String.format(
-            "당신은 대학교 행정 및 학사 일정을 안내하는 친절하고 정확한 비서 AI입니다.\n" +
-            "아래 제공된 [참고 데이터]만을 바탕으로 사용자의 [질문]에 답변하세요.\n\n" +
-            "🚨 [절대 지켜야 할 주의사항]\n" +
-            "1. 참고 데이터에 없는 내용은 절대 지어내지(Hallucination) 마세요.\n" +
-            "2. 모르는 내용이면 '정보가 없습니다'라고 솔직하게 답변하세요.\n" +
-            "3. 답변은 간결하고 가독성 좋게 마크다운(Markdown) 리스트나 표를 활용해 정리해 주세요.\n\n" +
-            "=== [참고 데이터 시작] ===\n%s\n=== [참고 데이터 끝] ===\n\n" +
-            "👤 [질문]: %s\n" +
-            "🤖 [답변]:", 
+            "### 역할\n" +
+            "너는 대학교 학사 정보 안내를 담당하는 지능형 어시스턴트야.\n\n" +
+            "### 임무\n" +
+            "제공된 [참고 데이터]를 꼼꼼히 분석하여 학생의 질문에 답해줘. 데이터의 형식이 불규칙하더라도 문맥을 파악해서 최대한 정보를 찾아내야 해.\n\n" +
+            "### 분석 가이드\n" +
+            "1. **키워드 매칭**: 질문에 포함된 요일(예: 수), 장소(예: 916), 과목명 등을 데이터에서 찾아.\n" +
+            "2. **정보 결합**: 정보가 여러 줄에 나뉘어 있어도(예: 한 줄에는 시간, 다음 줄에는 과목명) 서로 인접해 있다면 하나의 수업 정보로 간주해.\n" +
+            "3. **추론**: '수 1교시'와 '09:00'이 같이 있다면 이를 연결해서 이해해.\n\n" +
+            "### 참고 데이터\n%s\n\n" +
+            "### 학생 질문\n%s\n\n" +
+            "### 답변 원칙\n" +
+            "- 데이터에 근거가 있다면 절대 '정보가 없다'고 하지 말 것.\n" +
+            "- 답변은 읽기 좋게 불렛 포인트로 정리해줘.",
             context, query
         );
 

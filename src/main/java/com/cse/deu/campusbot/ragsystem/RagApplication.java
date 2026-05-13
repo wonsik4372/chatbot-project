@@ -19,6 +19,7 @@ import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
+import java.time.Duration;
 
 /**
  *
@@ -30,7 +31,7 @@ public class RagApplication {
         System.out.println("🚀 CampusBot RAG 시스템 초기화를 시작합니다...");
 
         // ==========================================
-        // 1. 환경 설정 불러오기
+        // 환경 설정 불러오기
         // ==========================================
         String ollamaUrl = ConfigReader.getProperty("ollama.base.url", "http://localhost:11434");
         String embedModelName = ConfigReader.getProperty("ollama.embedding.model", "nomic-embed-text");
@@ -38,21 +39,23 @@ public class RagApplication {
         int port = ConfigReader.getIntProperty("server.port", 8080);
 
         // ==========================================
-        // 2. LangChain4j 모델 연결 설정
+        // LangChain4j 모델 연결 설정
         // ==========================================
         EmbeddingModel embeddingModel = OllamaEmbeddingModel.builder()
                 .baseUrl(ollamaUrl)
                 .modelName(embedModelName)
+                .timeout(Duration.ofMinutes(5))
                 .build();
 
         ChatLanguageModel chatModel = OllamaChatModel.builder()
                 .baseUrl(ollamaUrl)
                 .modelName(chatModelName)
                 .temperature(0.0) // 사실 기반 답변을 위해 창의성(온도) 0으로 고정
+                .timeout(Duration.ofMinutes(5))
                 .build();
 
         // ==========================================
-        // 3. 의존성 조립 (Dependency Injection)
+        // 의존성 조립 (Dependency Injection)
         // ==========================================
         InMemoryEmbeddingStore<TextSegment> store = EmbeddingStoreManager.getInstance();
         
@@ -60,7 +63,7 @@ public class RagApplication {
         RagChatService chatService = new RagChatService(chatModel, embeddingModel, store);
         ChatHandler chatHandler = new ChatHandler(chatService);
 
-        // 💡 만약 서버 켤 때마다 특정 폴더를 자동 학습시키고 싶다면 아래 주석을 풀면 돼!
+        // 만약 서버 켤 때마다 특정 폴더를 자동 학습 
         // try {
         //     ingestionService.indexDocuments("data/docs");
         // } catch (Exception e) {
@@ -70,6 +73,36 @@ public class RagApplication {
         // ==========================================
         // 4. Javalin 웹 서버 구동 및 라우팅
         // ==========================================
+        
+        System.out.println(" 데이터 학습 프로세스 시작...");
+
+        // 로컬 디렉토리 학습
+        String docDir = ConfigReader.getProperty("ingestion.directory", "");
+        if (!docDir.isBlank()) {
+            try {
+                int fileChunks = ingestionService.indexDocuments(docDir);
+                System.out.println("📂 문서 학습 완료: " + fileChunks + "개 청크 생성됨.");
+            } catch (Exception e) {
+                System.err.println("❌ 문서 학습 실패 (" + docDir + "): " + e.getMessage());
+            }
+        }
+
+        // 웹 URL 리스트 학습
+        String urlList = ConfigReader.getProperty("ingestion.urls", "");
+        if (!urlList.isBlank()) {
+            for (String url : urlList.split(",")) {
+                String targetUrl = url.trim();
+                if (!targetUrl.isEmpty()) {
+                    try {
+                        int urlChunks = ingestionService.crawlAndIndexUrl(targetUrl, 1);
+                        System.out.println("🌐 URL 학습 완료 (" + targetUrl + "): " + urlChunks + "개 청크 생성됨.");
+                    } catch (Exception e) {
+                        System.err.println("❌ URL 학습 실패 (" + targetUrl + "): " + e.getMessage());
+                    }
+                }
+            }
+        }
+        
         Javalin app = Javalin.create(config -> {
             // 프론트엔드 파일(index.html 등)을 제공할 정적 폴더 경로 지정
             config.staticFiles.add("/public", Location.CLASSPATH);
