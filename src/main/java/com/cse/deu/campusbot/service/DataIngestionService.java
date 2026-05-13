@@ -6,10 +6,11 @@ package com.cse.deu.campusbot.service;
 
 import com.cse.deu.campusbot.util.ConfigReader;
 import com.cse.deu.campusbot.parser.MarkdownCsvParser;
+import com.cse.deu.campusbot.parser.LocalPdfParser;
 
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.loader.FileSystemDocumentLoader;
-import dev.langchain4j.data.document.parser.apache.pdfbox.ApachePdfBoxDocumentParser;
+// import dev.langchain4j.data.document.parser.apache.pdfbox.ApachePdfBoxDocumentParser;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -83,16 +84,19 @@ public class DataIngestionService {
     // 웹페이지 크롤링 학습
     // ========================================================================
     public int crawlAndIndexUrl(String urlString, int maxDepth) {
-        String normalizedUrl = urlString.split("#")[0];
+        // 1. URL 정규화 및 중복 체크
+        String normalizedUrl = urlString.split("#")[0].replaceAll("/$", "");
         if (maxDepth < 0 || visitedUrls.contains(normalizedUrl)) return 0;
-        
+
         visitedUrls.add(normalizedUrl);
         int chunksAdded = 0;
 
         try {
+            System.out.println("🌐 크롤링 중: " + normalizedUrl + " (남은 깊이: " + maxDepth + ")");
+
             URL url = new URL(normalizedUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
 
@@ -103,28 +107,54 @@ public class DataIngestionService {
                 rawHtml = s.hasNext() ? s.next() : "";
             }
 
+            // 현재 페이지 학습
             String cleanText = htmlToMarkdownText(rawHtml);
             if (!cleanText.isEmpty()) {
-                chunksAdded += processAndStoreText(cleanText, "웹문서:" + normalizedUrl);
+                chunksAdded += processAndStoreText(cleanText, "웹:" + normalizedUrl);
             }
 
-            // 하위 링크 탐색 (기존 정규식 로직)
+            // 2. 하위 링크 탐색 및 재귀 호출
             if (maxDepth > 0) {
+                // href="내용" 추출을 위한 정규식
                 Matcher linkMatcher = Pattern.compile("(?is)<a[^>]+href\\s*=\\s*['\"]([^'\"]+)['\"][^>]*>").matcher(rawHtml);
-                int linkCount = 0;
-                while (linkMatcher.find() && linkCount < 8) {
-                    String nextUrl = linkMatcher.group(1).trim();
-                    if (nextUrl.startsWith("http") && nextUrl.contains("deu.ac.kr/se/")
-                            && !nextUrl.matches(".*\\.(pdf|jpg|png|zip|css|js)$")) {
+
+                while (linkMatcher.find()) {
+                    String href = linkMatcher.group(1).trim();
+                    String nextUrl = resolveUrl(normalizedUrl, href); // 상대 경로를 절대 경로로 변환
+
+                    // 학습 대상 필터링 (같은 도메인인지, 이미 방문했는지, 파일 링크가 아닌지)
+                    if (nextUrl != null && isTargetUrl(nextUrl)) {
                         chunksAdded += crawlAndIndexUrl(nextUrl, maxDepth - 1);
-                        linkCount++;
                     }
                 }
             }
         } catch (Exception e) {
-            System.err.println("URL 처리 오류 (" + normalizedUrl + "): " + e.getMessage());
+            System.err.println("❌ URL 처리 실패 (" + normalizedUrl + "): " + e.getMessage());
         }
         return chunksAdded;
+    }
+
+    /**
+     * 상대 경로를 절대 경로로 변환하는 유틸리티
+     */
+    private String resolveUrl(String baseUrl, String href) {
+        try {
+            if (href.startsWith("javascript:") || href.startsWith("#") || href.isEmpty()) return null;
+            URL base = new URL(baseUrl);
+            URL resolved = new URL(base, href); // 상대 경로 처리 핵심
+            return resolved.toString().split("#")[0];
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 학습 대상인지 필터링 (불필요한 외부 사이트나 이미지 차단)
+     */
+    private boolean isTargetUrl(String url) {
+        return url.contains("deu.ac.kr/se/") // 우리 학과 사이트 내부만 탐색
+               && !url.matches(".*\\.(pdf|jpg|png|zip|css|js|docx|xlsx)$") // 문서/파일 제외
+               && !visitedUrls.contains(url); // 중복 방지
     }
 
     // ========================================================================
@@ -188,7 +218,7 @@ public class DataIngestionService {
         } else if (rawFileName.toLowerCase().endsWith(".pdf")) {
             // pdf 처리
             // LangChain4j 공식 PDFBox 파서 객체 생성
-            ApachePdfBoxDocumentParser pdfParser = new ApachePdfBoxDocumentParser();
+            LocalPdfParser pdfParser = new LocalPdfParser();
             
             // FileSystemDocumentLoader가 파일 열기/닫기, 텍스트 추출을 모두 알아서 처리
             Document document = FileSystemDocumentLoader.loadDocument(file.toPath(), pdfParser);
