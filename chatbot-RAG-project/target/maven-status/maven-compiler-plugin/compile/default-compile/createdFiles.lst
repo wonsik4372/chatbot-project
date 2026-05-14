@@ -1,0 +1,9 @@
+com\mycompany\chatbot\rag\project\TextChunker.class
+com\mycompany\chatbot\rag\project\DocumentLoader.class
+com\mycompany\chatbot\rag\project\RAGAssistant.class
+com\mycompany\chatbot\rag\project\TimetableStore.class
+com\mycompany\chatbot\rag\project\VectorStoreManager.class
+com\mycompany\chatbot\rag\project\Timetable.class
+com\mycompany\chatbot\rag\project\ChatbotRAGProject.class
+com\mycompany\chatbot\rag\project\DocumentLoader$RawDocument.class
+com\mycompany\chatbot\rag\project\RAGApplication.class
