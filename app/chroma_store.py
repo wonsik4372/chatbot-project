@@ -43,21 +43,41 @@ def reset_collection() -> None:
     client.get_or_create_collection(name=COLLECTION_NAME)
 
 
-def add_documents(
+def add_documents_with_embeddings(
     ids: list[str],
     texts: list[str],
     metadatas: list[dict[str, str | int]],
+    embeddings: list[list[float]],
 ) -> None:
-    """여러 문서 청크를 임베딩한 뒤 ChromaDB에 저장합니다."""
+    """이미 계산된 임베딩과 문서 청크를 ChromaDB에 저장합니다."""
 
     collection = get_chroma_collection()
-    embeddings = [embed_text(text) for text in texts]
-
     collection.add(
         ids=ids,
         documents=texts,
         embeddings=embeddings,
         metadatas=metadatas,
+    )
+
+
+def rebuild_collection(
+    ids: list[str],
+    texts: list[str],
+    metadatas: list[dict[str, str | int]],
+) -> None:
+    """전체 컬렉션을 새 문서 목록으로 교체합니다.
+
+    임베딩을 먼저 모두 계산한 뒤 컬렉션을 초기화합니다.
+    이렇게 하면 Ollama 연결 실패 시 기존 ChromaDB 데이터가 지워지는 문제를 줄일 수 있습니다.
+    """
+
+    embeddings = [embed_text(text) for text in texts]
+    reset_collection()
+    add_documents_with_embeddings(
+        ids=ids,
+        texts=texts,
+        metadatas=metadatas,
+        embeddings=embeddings,
     )
 
 

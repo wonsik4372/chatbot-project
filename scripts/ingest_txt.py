@@ -9,7 +9,6 @@
 
 from pathlib import Path
 import sys
-from uuid import uuid4
 
 
 # scripts 폴더에서 실행해도 app 패키지를 찾을 수 있도록 프로젝트 루트를 경로에 추가합니다.
@@ -18,56 +17,16 @@ sys.path.append(str(PROJECT_ROOT))
 
 from app.config import (  # noqa: E402
     CHROMA_DB_DIR,
-    TXT_CHUNK_OVERLAP,
-    TXT_CHUNK_SIZE,
     TXT_DATA_DIR,
 )
-from app.chroma_store import add_documents, reset_collection  # noqa: E402
-from app.text_splitter import split_text  # noqa: E402
-
-
-def read_txt_file(path: Path) -> str:
-    """TXT 파일 하나를 읽어서 문자열로 반환합니다."""
-
-    return path.read_text(encoding="utf-8")
-
-
-def collect_txt_chunks() -> tuple[list[str], list[str], list[dict[str, str | int]]]:
-    """data/txt 폴더의 모든 TXT 파일을 읽고 청크 목록을 만듭니다."""
-
-    ids = []
-    texts = []
-    metadatas = []
-
-    txt_files = sorted(TXT_DATA_DIR.glob("*.txt"))
-
-    for file_path in txt_files:
-        text = read_txt_file(file_path)
-        chunks = split_text(
-            text=text,
-            chunk_size=TXT_CHUNK_SIZE,
-            chunk_overlap=TXT_CHUNK_OVERLAP,
-        )
-
-        for chunk_index, chunk in enumerate(chunks):
-            ids.append(str(uuid4()))
-            texts.append(chunk)
-            metadatas.append(
-                {
-                    "source": str(file_path.relative_to(PROJECT_ROOT)),
-                    "source_type": "txt",
-                    "chunk_index": chunk_index,
-                }
-            )
-
-    return ids, texts, metadatas
+from app.chroma_store import rebuild_collection  # noqa: E402
+from app.document_loader import collect_txt_chunks  # noqa: E402
 
 
 def main() -> None:
     """TXT 문서를 ChromaDB에 색인합니다."""
 
     TXT_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    reset_collection()
 
     ids, texts, metadatas = collect_txt_chunks()
 
@@ -75,7 +34,7 @@ def main() -> None:
         print("색인할 TXT 파일이 없습니다. data/txt 폴더에 .txt 파일을 넣어주세요.")
         return
 
-    add_documents(ids=ids, texts=texts, metadatas=metadatas)
+    rebuild_collection(ids=ids, texts=texts, metadatas=metadatas)
 
     print(f"TXT 문서 색인 완료: {len(texts)}개 청크 저장")
     print(f"ChromaDB 저장 위치: {CHROMA_DB_DIR}")

@@ -4,3 +4,4 @@ chromadb==0.5.23
 ollama==0.4.5
 python-dotenv==1.0.1
 pydantic==2.10.4
+pypdf==5.1.0

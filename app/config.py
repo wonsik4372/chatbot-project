@@ -36,6 +36,9 @@ CHROMA_DB_DIR = Path(os.getenv("CHROMA_DB_DIR", BASE_DIR / "chroma_db"))
 # TXT 문서가 들어 있는 폴더입니다.
 TXT_DATA_DIR = Path(os.getenv("TXT_DATA_DIR", BASE_DIR / "data" / "txt"))
 
+# PDF 문서가 들어 있는 폴더입니다.
+PDF_DATA_DIR = Path(os.getenv("PDF_DATA_DIR", BASE_DIR / "data" / "pdf"))
+
 
 # ChromaDB 안에서 사용할 컬렉션 이름입니다.
 # PDF, 웹페이지를 추가하는 다음 단계에서도 같은 컬렉션에 source_type을 구분해 넣을 수 있습니다.
@@ -43,9 +46,13 @@ COLLECTION_NAME = "deu_cse_documents"
 
 
 # TXT 파일 전용 청크 크기입니다.
-# 나중에 PDF와 웹페이지는 별도 크기를 추가하면 됩니다.
 TXT_CHUNK_SIZE = int(os.getenv("TXT_CHUNK_SIZE", "700"))
 TXT_CHUNK_OVERLAP = int(os.getenv("TXT_CHUNK_OVERLAP", "100"))
+
+# PDF 파일 전용 청크 크기입니다.
+# PDF는 한 페이지 안에 많은 정보가 들어갈 수 있어서 TXT보다 조금 크게 잡았습니다.
+PDF_CHUNK_SIZE = int(os.getenv("PDF_CHUNK_SIZE", "1000"))
+PDF_CHUNK_OVERLAP = int(os.getenv("PDF_CHUNK_OVERLAP", "150"))
 
 
 # 질문과 관련 있는 문서 조각을 몇 개 가져올지 정합니다.

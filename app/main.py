@@ -12,8 +12,8 @@ from app.retriever import search_documents
 
 app = FastAPI(
     title="동의대학교 컴퓨터소프트웨어공학전공 안내 RAG 챗봇",
-    description="1단계: TXT 파일만 사용하는 최소 RAG 챗봇",
-    version="0.1.0",
+    description="2단계: TXT와 PDF 파일을 사용하는 RAG 챗봇",
+    version="0.2.0",
 )
 
 
@@ -27,6 +27,7 @@ class Source(BaseModel):
     """답변 생성에 참고한 문서 출처 형식입니다."""
 
     source: str
+    page: int | None = None
     chunk_index: int
 
 
@@ -41,6 +42,7 @@ class SearchResult(BaseModel):
     """질문과 비슷해서 검색된 문서 청크 형식입니다."""
 
     source: str
+    page: int | None = None
     chunk_index: int
     distance: float
     text: str
@@ -76,6 +78,7 @@ def search(request: ChatRequest) -> list[dict]:
         results.append(
             {
                 "source": str(metadata.get("source", "알 수 없는 출처")),
+                "page": metadata.get("page"),
                 "chunk_index": int(metadata.get("chunk_index", 0)),
                 "distance": float(doc["distance"]),
                 "text": doc["text"],
