@@ -11,8 +11,6 @@ from pathlib import Path
 import sys
 from uuid import uuid4
 
-import chromadb
-
 
 # scripts 폴더에서 실행해도 app 패키지를 찾을 수 있도록 프로젝트 루트를 경로에 추가합니다.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -25,7 +23,7 @@ from app.config import (  # noqa: E402
     TXT_CHUNK_SIZE,
     TXT_DATA_DIR,
 )
-from app.vector_store import add_documents  # noqa: E402
+from app.vector_store import add_documents, get_chroma_client  # noqa: E402
 
 
 def read_txt_file(path: Path) -> str:
@@ -42,21 +40,36 @@ def split_text(text: str, chunk_size: int, chunk_overlap: int) -> list[str]:
     겹침을 주면 문맥이 중간에 끊기는 문제를 조금 줄일 수 있습니다.
     """
 
+    if chunk_size <= 0:
+        raise ValueError("chunk_size는 1 이상이어야 합니다.")
+
+    if chunk_overlap < 0:
+        raise ValueError("chunk_overlap은 0 이상이어야 합니다.")
+
+    if chunk_overlap >= chunk_size:
+        raise ValueError("chunk_overlap은 chunk_size보다 작아야 합니다.")
+
     chunks = []
     start = 0
 
     while start < len(text):
         end = start + chunk_size
-        chunk = text[start:end].strip()
+        raw_chunk = text[start:end]
+        chunk = raw_chunk.strip()
 
         if chunk:
             chunks.append(chunk)
 
-        start = end - chunk_overlap
+        # 다음 시작점은 end 값이 아니라 실제로 잘라낸 원문 길이를 기준으로 계산합니다.
+        # strip()으로 공백을 제거해 저장하더라도, 위치 이동은 원본 텍스트 기준이어야 합니다.
+        actual_cut_length = len(raw_chunk)
+        next_start = start + actual_cut_length - chunk_overlap
 
-        # chunk_overlap 값이 너무 커서 무한 반복되는 상황을 막습니다.
-        if start < 0:
-            start = 0
+        # 문서 끝에 도달했거나 더 이상 앞으로 진행할 수 없으면 반복을 끝냅니다.
+        if actual_cut_length < chunk_size or next_start <= start:
+            break
+
+        start = next_start
 
     return chunks
 
@@ -67,7 +80,7 @@ def reset_collection() -> None:
     1단계에서는 단순함을 위해 색인할 때마다 전체 TXT 문서를 다시 저장합니다.
     """
 
-    client = chromadb.PersistentClient(path=str(CHROMA_DB_DIR))
+    client = get_chroma_client()
 
     try:
         client.delete_collection(name=COLLECTION_NAME)
