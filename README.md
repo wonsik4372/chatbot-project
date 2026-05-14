@@ -14,10 +14,13 @@
 project_chatbot/
 ├── app/
 │   ├── __init__.py
+│   ├── chroma_store.py
 │   ├── config.py
 │   ├── main.py
+│   ├── ollama_service.py
 │   ├── rag.py
-│   └── vector_store.py
+│   ├── retriever.py
+│   └── text_splitter.py
 ├── data/
 │   └── txt/
 │       └── sample.txt
@@ -137,16 +140,54 @@ curl -X POST "http://127.0.0.1:8000/chat" \
 
 1. `data/txt` 폴더에 TXT 문서를 넣습니다.
 2. `scripts/ingest_txt.py`를 실행합니다.
-3. TXT 파일을 읽고 작은 청크로 나눕니다.
-4. 각 청크를 Ollama `nomic-embed-text`로 임베딩합니다.
-5. 임베딩과 원문 청크를 ChromaDB에 저장합니다.
+3. `app/text_splitter.py`가 TXT 파일을 작은 청크로 나눕니다.
+4. `app/ollama_service.py`가 각 청크를 Ollama `nomic-embed-text`로 임베딩합니다.
+5. `app/chroma_store.py`가 임베딩과 원문 청크를 ChromaDB에 저장합니다.
 6. 사용자가 `/chat` API로 질문합니다.
-7. 질문도 같은 임베딩 모델로 임베딩합니다.
-8. ChromaDB에서 질문과 가까운 문서 청크를 찾습니다.
-9. 찾은 청크를 근거 자료로 `gemma3:4b`에 전달합니다.
+7. `app/retriever.py`가 먼저 키워드 검색으로 정확한 이름, 전화번호, 이메일 등을 찾습니다.
+8. 키워드 검색 결과가 없으면 질문을 임베딩해서 ChromaDB에서 의미가 가까운 문서 청크를 찾습니다.
+9. `app/rag.py`가 찾은 청크를 근거 자료로 `gemma3:4b`에 전달합니다.
 10. 모델은 제공된 자료 안에서만 답변하고, 참고 출처를 함께 반환합니다.
 
-## 6. 중요한 규칙
+## 6. 파일별 역할
+
+```text
+app/main.py
+```
+
+FastAPI 서버의 API 주소를 정의합니다. `/chat`, `/search`가 이 파일에 있습니다.
+
+```text
+app/rag.py
+```
+
+질문을 받고, 관련 문서를 검색한 뒤, Ollama에게 답변 생성을 요청하는 RAG 흐름을 담당합니다.
+
+```text
+app/retriever.py
+```
+
+질문과 관련 있는 문서 청크를 찾습니다. 키워드 검색을 먼저 하고, 없으면 벡터 검색을 합니다.
+
+```text
+app/chroma_store.py
+```
+
+ChromaDB 컬렉션 생성, 초기화, 문서 저장, 임베딩 검색 요청을 담당합니다.
+
+```text
+app/ollama_service.py
+```
+
+Ollama 임베딩 모델과 LLM 모델에 요청을 보내는 기능을 담당합니다.
+
+```text
+app/text_splitter.py
+```
+
+긴 문서를 청크로 나누는 기능을 담당합니다.
+
+## 7. 중요한 규칙
 
 자료에 없는 내용은 추측하지 않고 아래 문장으로 답하도록 프롬프트에 명시했습니다.
 

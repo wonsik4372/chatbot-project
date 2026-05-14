@@ -1,0 +1,21 @@
+# Python 가상환경
+.venv/
+
+# Python 실행 캐시
+__pycache__/
+*.py[cod]
+
+# macOS 자동 생성 파일
+.DS_Store
+
+# ChromaDB 로컬 색인 데이터
+chroma_db/
+
+# 로컬 환경변수 파일
+.env
+
+# iCloud/macOS에서 생기는 복제 파일
+* 2.py
+* 2.txt
+* 2.sqlite3
+* 2/

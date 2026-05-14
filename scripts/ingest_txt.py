@@ -18,77 +18,18 @@ sys.path.append(str(PROJECT_ROOT))
 
 from app.config import (  # noqa: E402
     CHROMA_DB_DIR,
-    COLLECTION_NAME,
     TXT_CHUNK_OVERLAP,
     TXT_CHUNK_SIZE,
     TXT_DATA_DIR,
 )
-from app.vector_store import add_documents, get_chroma_client  # noqa: E402
+from app.chroma_store import add_documents, reset_collection  # noqa: E402
+from app.text_splitter import split_text  # noqa: E402
 
 
 def read_txt_file(path: Path) -> str:
     """TXT 파일 하나를 읽어서 문자열로 반환합니다."""
 
     return path.read_text(encoding="utf-8")
-
-
-def split_text(text: str, chunk_size: int, chunk_overlap: int) -> list[str]:
-    """긴 텍스트를 일정한 크기의 청크로 나눕니다.
-
-    chunk_size는 청크 하나의 최대 글자 수입니다.
-    chunk_overlap은 앞 청크와 다음 청크가 겹치는 글자 수입니다.
-    겹침을 주면 문맥이 중간에 끊기는 문제를 조금 줄일 수 있습니다.
-    """
-
-    if chunk_size <= 0:
-        raise ValueError("chunk_size는 1 이상이어야 합니다.")
-
-    if chunk_overlap < 0:
-        raise ValueError("chunk_overlap은 0 이상이어야 합니다.")
-
-    if chunk_overlap >= chunk_size:
-        raise ValueError("chunk_overlap은 chunk_size보다 작아야 합니다.")
-
-    chunks = []
-    start = 0
-
-    while start < len(text):
-        end = start + chunk_size
-        raw_chunk = text[start:end]
-        chunk = raw_chunk.strip()
-
-        if chunk:
-            chunks.append(chunk)
-
-        # 다음 시작점은 end 값이 아니라 실제로 잘라낸 원문 길이를 기준으로 계산합니다.
-        # strip()으로 공백을 제거해 저장하더라도, 위치 이동은 원본 텍스트 기준이어야 합니다.
-        actual_cut_length = len(raw_chunk)
-        next_start = start + actual_cut_length - chunk_overlap
-
-        # 문서 끝에 도달했거나 더 이상 앞으로 진행할 수 없으면 반복을 끝냅니다.
-        if actual_cut_length < chunk_size or next_start <= start:
-            break
-
-        start = next_start
-
-    return chunks
-
-
-def reset_collection() -> None:
-    """기존 ChromaDB 컬렉션을 삭제하고 새로 만들 준비를 합니다.
-
-    1단계에서는 단순함을 위해 색인할 때마다 전체 TXT 문서를 다시 저장합니다.
-    """
-
-    client = get_chroma_client()
-
-    try:
-        client.delete_collection(name=COLLECTION_NAME)
-    except ValueError:
-        # 컬렉션이 아직 없으면 삭제할 것도 없으므로 그냥 넘어갑니다.
-        pass
-
-    client.get_or_create_collection(name=COLLECTION_NAME)
 
 
 def collect_txt_chunks() -> tuple[list[str], list[str], list[dict[str, str | int]]]:

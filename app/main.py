@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
 from app.rag import answer_question
-from app.vector_store import search_similar_documents
+from app.retriever import search_documents
 
 
 app = FastAPI(
@@ -68,7 +68,7 @@ def search(request: ChatRequest) -> list[dict]:
     검색 단계에서 관련 자료를 못 찾은 것인지 LLM 답변 생성 단계의 문제인지 구분할 수 있습니다.
     """
 
-    documents = search_similar_documents(question=request.question, top_k=5)
+    documents = search_documents(question=request.question, top_k=5)
 
     results = []
     for doc in documents:

@@ -6,10 +6,9 @@ RAG는 Retrieval Augmented Generation의 줄임말입니다.
 
 from typing import Any
 
-import ollama
-
-from app.config import LLM_MODEL, OLLAMA_HOST, TOP_K
-from app.vector_store import search_similar_documents
+from app.config import TOP_K
+from app.ollama_service import generate_answer
+from app.retriever import search_documents
 
 
 SYSTEM_PROMPT = """당신은 동의대학교 컴퓨터소프트웨어공학전공 안내 챗봇입니다.
@@ -76,7 +75,7 @@ def make_sources(documents: list[dict[str, Any]]) -> list[dict[str, str | int]]:
 def answer_question(question: str) -> dict[str, Any]:
     """질문을 받아 RAG 방식으로 답변을 생성합니다."""
 
-    documents = search_similar_documents(question=question, top_k=TOP_K)
+    documents = search_documents(question=question, top_k=TOP_K)
 
     if not documents:
         return {
@@ -95,16 +94,7 @@ def answer_question(question: str) -> dict[str, Any]:
 {question}
 """
 
-    client = ollama.Client(host=OLLAMA_HOST)
-    response = client.chat(
-        model=LLM_MODEL,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-    )
-
-    answer = response["message"]["content"].strip()
+    answer = generate_answer(system_prompt=SYSTEM_PROMPT, user_prompt=user_prompt)
 
     return {
         "answer": answer,
