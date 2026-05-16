@@ -1,67 +1,90 @@
-document.getElementById('send-btn').addEventListener('click', ask);
+const chatForm = document.getElementById('chat-form');
+const userInput = document.getElementById('user-input');
+const chatWindow = document.getElementById('chat-window');
+const sendBtn = document.getElementById('send-btn'); // 버튼 제어를 위해 추가
 
-document.getElementById('user-input').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        // 입력창이 활성화되어 있을 때만(비활성화 중복 방지) 실행
-        if (!document.getElementById('user-input').disabled) {
-            ask();
-        }
-    }
-});
-async function ask() {
-    const inputElement = document.getElementById('user-input');
-    const sendButton = document.getElementById('send-btn');
-    const chatHistory = document.getElementById('chat-history');
-    const question = inputElement.value.trim();
+chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const question = userInput.value.trim();
+    if (!question) return;
 
+    // --- [중요] 질문 시작 시 입력창과 버튼 비활성화 ---
+    setDisabled(true);
 
-    if (!question)
-        return;
+    // 1. 사용자 메시지 화면에 추가
+    addMessage(question, 'user');
+    userInput.value = '';
 
-    // --- [대기 상태 시작] ---
-    // 입력창과 버튼을 비활성화해서 중복 입력을 막음
-    inputElement.disabled = true;
-    sendButton.disabled = true;
-    const originalPlaceholder = inputElement.placeholder;
-    inputElement.placeholder = "Gemma가 답변을 생각 중입니다...";
-
-    // 1. 사용자 질문 화면에 추가
-    chatHistory.innerHTML += `<div class="user-msg"><strong>나:</strong> ${question}</div>`;
-    inputElement.value = '';
-    chatHistory.scrollTop = chatHistory.scrollHeight;
+    // 2. 봇 "생각 중..." 표시
+    const loadingMessage = addMessage("대답을 생각 중이에요...", 'bot');
 
     try {
-        // 2. 자바 컨트롤러(Back-end)로 데이터 전송
-        const response = await fetch('/api/chat', {
+        // 3. 백엔드 API 호출
+        const response = await fetch('http://localhost:8080/api/chat', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({"question": question})
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: question })
         });
 
-        if (!response.ok) { // 200~299 범위가 아닐 경우
-            throw new Error(`서버 응답 오류: ${response.status}`);
-        }
-
         const data = await response.json();
-
-        // 3. 서버가 준 답변 화면에 추가
-        chatHistory.innerHTML += `<div class="ai-msg"><strong>AI:</strong> ${data.answer}</div>`;
-
-        // 스크롤 하단 이동
-        chatHistory.scrollTop = chatHistory.scrollHeight;
+        
+        // 4. 로딩 메시지 제거 후 실제 답변 타이핑 효과 시작
+        chatWindow.removeChild(loadingMessage);
+        
+        // 답변이 끝난 후 비활성화를 해제하도록 콜백 전달
+        typeWriter(data.answer, 'bot', () => {
+            setDisabled(false); // 타이핑 종료 후 다시 활성화
+        });
 
     } catch (error) {
-        console.error("연결 오류:", error);
-        chatHistory.innerHTML += `<p style="color:red;">오류: 서버와 연결할 수 없습니다.</p>`;
-    } finally {
-        // --- [대기 상태 종료] ---
-        // 작업이 끝나면(성공하든 실패하든) 다시 활성화
-        inputElement.disabled = false;
-        sendButton.disabled = false;
-        inputElement.placeholder = originalPlaceholder;
-        inputElement.focus(); // 바로 다음 질문 가능하게 포커스
-
-        // 스크롤 하단 이동
-        chatHistory.scrollTop = chatHistory.scrollHeight;
+        chatWindow.removeChild(loadingMessage);
+        addMessage("서버와 연결할 수 없습니다. 다시 시도해 주세요.", 'bot');
+        setDisabled(false); // 에러 발생 시에도 다시 질문할 수 있게 해제
     }
+});
+
+// 입력창과 버튼의 상태를 조절하는 함수
+function setDisabled(state) {
+    userInput.disabled = state;
+    sendBtn.disabled = state;
+    
+    // 비활성화 시 시각적인 피드백 (반투명 처리)
+    if (state) {
+        chatForm.style.opacity = "0.6";
+        userInput.placeholder = "답변을 기다리는 중...";
+    } else {
+        chatForm.style.opacity = "1";
+        userInput.placeholder = "질문을 입력하세요...";
+        userInput.focus(); // 다시 활성화되면 자동으로 포커스
+    }
+}
+
+function addMessage(text, sender) {
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', sender);
+    messageDiv.innerHTML = `<div class="bubble">${text}</div>`;
+    chatWindow.appendChild(messageDiv);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+    return messageDiv;
+}
+
+// 수정된 타이핑 함수 (콜백 기능 추가)
+function typeWriter(text, sender, callback) {
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', sender);
+    const bubble = document.createElement('div');
+    bubble.classList.add('bubble');
+    messageDiv.appendChild(bubble);
+    chatWindow.appendChild(messageDiv);
+
+    let i = 0;
+    const interval = setInterval(() => {
+        bubble.innerText += text.charAt(i);
+        i++;
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        if (i >= text.length) {
+            clearInterval(interval);
+            if (callback) callback(); // 모든 글자가 써지면 비활성화 해제 실행
+        }
+    }, 20);
 }
