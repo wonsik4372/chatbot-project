@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>PNU 컴퓨터소프트웨어공학과 조교 챗봇</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .chat-container { width: 450px; height: 600px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        .chat-header { background: #007bff; color: white; padding: 15px; font-size: 18px; font-weight: bold; text-align: center; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { padding: 10px 14px; border-radius: 8px; max-width: 75%; font-size: 14px; line-height: 1.4; white-space: pre-wrap; }
+        .user { background: #007bff; color: white; align-self: flex-end; }
+        .bot { background: #e9ecef; color: #333; align-self: flex-start; }
+        .chat-input-area { display: flex; border-top: 1px solid #ddd; padding: 10px; background: #fff; }
+        .chat-input { flex: 1; border: 1px solid #ddd; border-radius: 4px; padding: 10px; outline: none; font-size: 14px; }
+        .chat-submit { background: #007bff; color: white; border: none; padding: 10px 15px; margin-left: 5px; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">🤖 스마트 학과 조교 (Hybrid RAG)</div>
+    <div class="chat-messages" id="chatMessages">
+        <div class="message bot">안녕하세요! PDF 문서 데이터 분석 기반의 조교입니다. 무엇이든 물어보세요! (예: 월요일 1교시 공강 강의실 알려줘)</div>
+    </div>
+    <div class="chat-input-area">
+        <input type="text" id="chatInput" class="chat-input" placeholder="질문을 입력하세요..." onkeypress="if(event.keyCode==13) sendMessage()">
+        <button class="chat-submit" onclick="sendMessage()">전송</button>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        const inputElement = document.getElementById('chatInput');
+        const question = inputElement.value.trim();
+        if (!question) return;
+
+        // 1. 유저 메시지 화면 추가
+        appendMessage(question, 'user');
+        inputElement.value = '';
+
+        // 2. 로딩 표시 수정
+        const loadingDiv = appendMessage('조교가 PDF 데이터를 교차 검증 중입니다...', 'bot');
+
+        try {
+            // 3. 자바 RAG 백엔드 서버의 API 주소로 요청을 보냅니다.
+            const response = await fetch('http://localhost:8080/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: question })
+            });
+            
+            const data = await response.json();
+            loadingDiv.remove();
+            
+            // 4. 자바 서버가 리턴해준 진짜 RAG 분석 답변을 출력합니다.
+            appendMessage(data.answer, 'bot');
+        } catch (error) {
+            loadingDiv.remove();
+            appendMessage('❌ 자바 RAG 백엔드 서버 연결에 실패했습니다.', 'bot');
+        }
+    }
+
+    function appendMessage(text, sender) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+        messageDiv.innerText = text;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        return messageDiv;
+    }
+</script>
+</body>
+</html>
