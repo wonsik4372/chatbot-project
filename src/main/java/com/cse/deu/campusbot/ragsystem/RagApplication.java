@@ -5,6 +5,8 @@
 package com.cse.deu.campusbot.ragsystem;
 
 import com.cse.deu.campusbot.api.ChatHandler;
+import com.cse.deu.campusbot.model.ChatRequest;
+import com.cse.deu.campusbot.model.ChatResponse;
 import com.cse.deu.campusbot.service.DataIngestionService;
 import com.cse.deu.campusbot.service.RagChatService;
 import com.cse.deu.campusbot.util.ConfigReader;
@@ -33,14 +35,15 @@ public class RagApplication {
         // ==========================================
         // 환경 설정 불러오기
         // ==========================================
-        String ollamaUrl = ConfigReader.getProperty("ollama.base.url", "http://localhost:11434");
-        String embedModelName = ConfigReader.getProperty("ollama.embedding.model", "nomic-embed-text");
+        String ollamaUrl = ConfigReader.getProperty("ollama.base.url", "http://100.74.51.50:11434");
+        String embedModelName = ConfigReader.getProperty("ollama.embedding.model", "bge-m3");
         String chatModelName = ConfigReader.getProperty("ollama.chat.model", "gemma4:latest");
         int port = ConfigReader.getIntProperty("server.port", 8080);
 
         // ==========================================
         // LangChain4j 모델 연결 설정
         // ==========================================
+        
         EmbeddingModel embeddingModel = OllamaEmbeddingModel.builder()
                 .baseUrl(ollamaUrl)
                 .modelName(embedModelName)
@@ -59,62 +62,54 @@ public class RagApplication {
         // ==========================================
         InMemoryEmbeddingStore<TextSegment> store = EmbeddingStoreManager.getInstance();
         
-        DataIngestionService ingestionService = new DataIngestionService(embeddingModel, store);
         RagChatService chatService = new RagChatService(chatModel, embeddingModel, store);
+        
+        DataIngestionService ingestionService = new DataIngestionService(embeddingModel, store, chatService);
         ChatHandler chatHandler = new ChatHandler(chatService);
 
-        // 만약 서버 켤 때마다 특정 폴더를 자동 학습 
-        // try {
-        //     ingestionService.indexDocuments("data/docs");
-        // } catch (Exception e) {
-        //     System.err.println("자동 학습 실패: " + e.getMessage());
-        // }
-
         // ==========================================
-        // 4. Javalin 웹 서버 구동 및 라우팅
+        // 데이터 학습 프로세스 시작
         // ==========================================
-        
         System.out.println(" 데이터 학습 프로세스 시작...");
-
-        // 로컬 디렉토리 학습
-        String docDir = ConfigReader.getProperty("ingestion.directory", "");
-        if (!docDir.isBlank()) {
-            try {
-                int fileChunks = ingestionService.indexDocuments(docDir);
-                System.out.println("📂 문서 학습 완료: " + fileChunks + "개 청크 생성됨.");
-            } catch (Exception e) {
-                System.err.println("❌ 문서 학습 실패 (" + docDir + "): " + e.getMessage());
-            }
-        }
-
-        // 웹 URL 리스트 학습
+        // data/docs의 pdf,csv 파일들을 md 형식으로 변환하여 parsingMDdp 폴더에 저장 
+        String docDir = ConfigReader.getProperty("ingestion.directory", "data/docs");
+        ingestionService.convertRawDocumentsToMarkdown(docDir);
+        
+        // URL 크롤링 -> parsingMD vhfejdp 저장
         String urlList = ConfigReader.getProperty("ingestion.urls", "");
         if (!urlList.isBlank()) {
             for (String url : urlList.split(",")) {
-                String targetUrl = url.trim();
-                if (!targetUrl.isEmpty()) {
-                    try {
-                        int urlChunks = ingestionService.crawlAndIndexUrl(targetUrl, 1);
-                        System.out.println("🌐 URL 학습 완료 (" + targetUrl + "): " + urlChunks + "개 청크 생성됨.");
-                    } catch (Exception e) {
-                        System.err.println("❌ URL 학습 실패 (" + targetUrl + "): " + e.getMessage());
-                    }
+                if (!url.trim().isEmpty()) {
+                    ingestionService.crawlUrl(url.trim(), 30); 
                 }
             }
         }
+
+        // 인덱싱
+        try {
+            String cacheDirPath = ConfigReader.getProperty("crawler.cache.dir", "data/parsingMD");
+            int chunks = ingestionService.indexDocuments(cacheDirPath); 
+            System.out.println("🌐 통합 지식 베이스(MD) 학습 완료: " + chunks + "개 청크 생성됨.");
+        } catch (Exception e) {
+            System.err.println("❌ 문서 학습 실패: " + e.getMessage());
+        }
         
+        // ==========================================
+        // Javalin 웹 서버 구동 및 라우팅
+        // ==========================================
         Javalin app = Javalin.create(config -> {
-            // 프론트엔드 파일(index.html 등)을 제공할 정적 폴더 경로 지정
             config.staticFiles.add("/public", Location.CLASSPATH);
-            
-            // CORS 에러 방지 (로컬에서 프론트/백엔드 통신 허용) - ✨ 수정된 부분
             config.bundledPlugins.enableCors(cors -> {
                 cors.addRule(it -> it.anyHost());
             });
         }).start(port);
 
         // 프론트엔드에서 POST 요청으로 질문이 오면 ChatHandler로 연결
-        app.post("/api/chat", chatHandler::handleChat);
+        app.post("/api/chat", ctx -> {
+            ChatRequest req = ctx.bodyAsClass(ChatRequest.class);
+            String realAnswer = chatService.askQuestion(req.getQuery()); 
+            ctx.json(new ChatResponse(realAnswer));
+        });
 
         System.out.println("서버 구동 완료! 브라우저에서 http://localhost:" + port + " 에 접속해 보세요.");
     }

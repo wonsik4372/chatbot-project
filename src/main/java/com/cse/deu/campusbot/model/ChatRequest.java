@@ -14,4 +14,8 @@ public record ChatRequest (String query){
             throw new IllegalArgumentException("ERROR: 질문(query)은 비어있을 수 없습니다.");
         }
     }
+    
+    public String getQuery() {
+        return query;
+    }
 }

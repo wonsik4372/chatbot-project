@@ -42,7 +42,7 @@ public class MarkdownCsvParser implements DocumentParser{
             for (int i = 1; i < records.size(); i++) {
                 mdBuilder.append("| ");
                 for (String cell : records.get(i)) {
-                    mdBuilder.append(cell.replaceAll("\\n", " / ").replaceAll("\\s+", " ").trim()).append(" | ");
+                    mdBuilder.append(cell.replaceAll("\\n", " / ").trim()).append(" | "); // replaceAll("\\s+", " ")
                 }
                 mdBuilder.append("\n");
             }
