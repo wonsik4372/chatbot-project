@@ -79,6 +79,21 @@
     </dependencies>
     
     
+    
+    
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- 메인 클래스 위치만 딱 지정 -->
+                    <mainClass>com.cse.deu.campusbot.CampusbotApplication</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>24</maven.compiler.release>

@@ -17,7 +17,10 @@ import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import dev.langchain4j.service.SystemMessage;
 import org.springframework.stereotype.Service;
+import org.springframework.core.io.ClassPathResource;
 import jakarta.annotation.PostConstruct;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 
@@ -62,8 +65,18 @@ public class RagService {
                 .build();
 
        // resources 아래의 docs 폴더를 읽어옵니다.
-        String path = Paths.get("src/main/resources/docs").toAbsolutePath().toString();
-        ingestor.ingest(FileSystemDocumentLoader.loadDocuments(path, new TextDocumentParser()));
+        try {
+            // ClassPathResource를 사용하여 target 안이든 src 안이든 무조건 resources/docs를 찾아냅니다.
+            ClassPathResource resource = new ClassPathResource("docs");
+            Path path = Paths.get(resource.getURI());
+            
+            System.out.println("문서 로딩 경로 확인: " + path.toAbsolutePath().toString());
+            ingestor.ingest(FileSystemDocumentLoader.loadDocuments(path, new TextDocumentParser()));
+            
+        } catch (IOException e) {
+            System.err.println("🚨 docs 폴더를 읽어오는 중 에러가 발생했습니다!");
+            e.printStackTrace();
+        }
         
         
         // 1단계: 기존의 EmbeddingStore 기반 ContentRetriever 생성 (넉넉하게 15~20개 가져옴)
