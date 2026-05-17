@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.dongeui.rag</groupId>
@@ -12,93 +14,182 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.2.4</version>
-        <relativePath/> 
+        <relativePath/>
     </parent>
 
     <properties>
+        <java.version>17</java.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        
+
         <langchain4j.version>0.31.0</langchain4j.version>
-        <start-class>com.dongeui.rag.RAGSystem</start-class>
+
+        <start-class>
+            com.dongeui.rag.RAGSystem
+        </start-class>
     </properties>
 
     <dependencies>
+
+        <!-- Spring -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- LangChain4j -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j</artifactId>
             <version>${langchain4j.version}</version>
         </dependency>
+
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-ollama</artifactId>
             <version>${langchain4j.version}</version>
         </dependency>
-<dependency>
+
+        <!-- PDF -->
+        <dependency>
             <groupId>technology.tabula</groupId>
             <artifactId>tabula</artifactId>
             <version>1.0.5</version>
+
             <exclusions>
+
+                <!-- 충돌 제거 -->
                 <exclusion>
                     <groupId>commons-logging</groupId>
                     <artifactId>commons-logging</artifactId>
                 </exclusion>
+
+                <!-- 구버전 Jackson 제거 -->
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-annotations</artifactId>
+                </exclusion>
+
             </exclusions>
         </dependency>
+
+        <!-- Apache POI -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>5.2.5</version>
         </dependency>
 
+        <!-- Jsoup -->
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
             <version>1.17.2</version>
         </dependency>
-        
+
+        <!-- Lucene -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+            <version>9.10.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queryparser</artifactId>
+            <version>9.10.0</version>
+        </dependency>
+
+        <!-- Jackson (통일 버전) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.17.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.17.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.17.1</version>
+        </dependency>
+
     </dependencies>
 
     <build>
+
         <plugins>
+
+            <!-- Spring Boot -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+
                 <configuration>
-                    <mainClass>com.dongeui.rag.RAGSystem</mainClass>
+                    <mainClass>
+                        com.dongeui.rag.RAGSystem
+                    </mainClass>
                 </configuration>
             </plugin>
 
+            <!-- Exec -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
+
                 <configuration>
-                    <mainClass>com.dongeui.rag.RAGSystem</mainClass>
-                    <cleanupDaemonThreads>false</cleanupDaemonThreads>
-                    
+
+                    <mainClass>
+                        com.dongeui.rag.RAGSystem
+                    </mainClass>
+
+                    <cleanupDaemonThreads>
+                        false
+                    </cleanupDaemonThreads>
+
                     <systemProperties>
+
                         <systemProperty>
                             <key>file.encoding</key>
                             <value>UTF-8</value>
                         </systemProperty>
+
                         <systemProperty>
                             <key>sun.stdout.encoding</key>
                             <value>UTF-8</value>
                         </systemProperty>
+
                         <systemProperty>
                             <key>sun.stderr.encoding</key>
                             <value>UTF-8</value>
                         </systemProperty>
+
                     </systemProperties>
+
                 </configuration>
             </plugin>
+
         </plugins>
+
     </build>
+
 </project>

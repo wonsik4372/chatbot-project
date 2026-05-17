@@ -1,0 +1,121 @@
+{
+  "year" : 2026,
+  "semester" : 1,
+  "source" : "911.pdf",
+  "defaultRoom" : "정보-911",
+  "schedules" : [ {
+    "day" : "화요일",
+    "period" : "1교시 (09:00 - 09:50)",
+    "subject" : "공학설계입문",
+    "professor" : "김성우",
+    "room" : "정보-911"
+  }, {
+    "day" : "수요일",
+    "period" : "1교시 (09:00 - 09:50)",
+    "subject" : "공학설계입문",
+    "professor" : "김성우",
+    "room" : "정보-911"
+  }, {
+    "day" : "목요일",
+    "period" : "1교시 (09:00 - 09:50)",
+    "subject" : "Python프로그래밍",
+    "professor" : "빈기철",
+    "room" : "정보-911"
+  }, {
+    "day" : "화요일",
+    "period" : "2교시 (10:00 - 10:50)",
+    "subject" : "공학설계입문",
+    "professor" : "김성우",
+    "room" : "정보-911"
+  }, {
+    "day" : "수요일",
+    "period" : "2교시 (10:00 - 10:50)",
+    "subject" : "공학설계입문",
+    "professor" : "김성우",
+    "room" : "정보-911"
+  }, {
+    "day" : "목요일",
+    "period" : "2교시 (10:00 - 10:50)",
+    "subject" : "Python프로그래밍",
+    "professor" : "빈기철",
+    "room" : "정보-911"
+  }, {
+    "day" : "화요일",
+    "period" : "3교시 (11:00 - 11:50)",
+    "subject" : "공학설계입문",
+    "professor" : "김성우",
+    "room" : "정보-911"
+  }, {
+    "day" : "수요일",
+    "period" : "3교시 (11:00 - 11:50)",
+    "subject" : "공학설계입문",
+    "professor" : "김성우",
+    "room" : "정보-911"
+  }, {
+    "day" : "목요일",
+    "period" : "3교시 (11:00 - 11:50)",
+    "subject" : "Python프로그래밍",
+    "professor" : "빈기철",
+    "room" : "정보-911"
+  }, {
+    "day" : "월요일",
+    "period" : "6교시 (14:00 - 14:50)",
+    "subject" : "컴퓨터비전응용",
+    "professor" : "권순각",
+    "room" : "정보-911"
+  }, {
+    "day" : "화요일",
+    "period" : "6교시 (14:00 - 14:50)",
+    "subject" : "컴퓨터비전응용",
+    "professor" : "권순각",
+    "room" : "정보-911"
+  }, {
+    "day" : "목요일",
+    "period" : "6교시 (14:00 - 14:50)",
+    "subject" : "그래픽스프로그래밍",
+    "professor" : "빈기철",
+    "room" : "정보-911"
+  }, {
+    "day" : "월요일",
+    "period" : "7교시 (15:00 - 15:50)",
+    "subject" : "컴퓨터비전응용",
+    "professor" : "권순각",
+    "room" : "정보-911"
+  }, {
+    "day" : "목요일",
+    "period" : "7교시 (15:00 - 15:50)",
+    "subject" : "그래픽스프로그래밍",
+    "professor" : "빈기철",
+    "room" : "정보-911"
+  }, {
+    "day" : "금요일",
+    "period" : "7교시 (15:00 - 15:50)",
+    "subject" : "캡스톤디자인II",
+    "professor" : "권순각",
+    "room" : "정보-911"
+  }, {
+    "day" : "화요일",
+    "period" : "8교시 (16:00 - 16:50)",
+    "subject" : "지도교수멘토링VII",
+    "professor" : "박유현",
+    "room" : "정보-911"
+  }, {
+    "day" : "목요일",
+    "period" : "8교시 (16:00 - 16:50)",
+    "subject" : "그래픽스프로그래밍",
+    "professor" : "빈기철",
+    "room" : "정보-911"
+  }, {
+    "day" : "금요일",
+    "period" : "8교시 (16:00 - 16:50)",
+    "subject" : "캡스톤디자인II",
+    "professor" : "권순각",
+    "room" : "정보-911"
+  }, {
+    "day" : "금요일",
+    "period" : "9교시 (17:00 - 17:50)",
+    "subject" : "캡스톤디자인II",
+    "professor" : "권순각",
+    "room" : "정보-911"
+  } ]
+}
